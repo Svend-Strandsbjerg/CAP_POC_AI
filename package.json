@@ -1,0 +1,32 @@
+{
+  "name": "cap-poc-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SAP CAP Node.js and TypeScript foundation for the EH3 ABAP to CAP modernization POC.",
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch",
+    "build": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types test/*.test.ts"
+  },
+  "dependencies": {
+    "@cap-js/sqlite": "^2.0.0",
+    "@sap/cds": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@sap/cds-dk": "^9.0.0",
+    "typescript": "^5.8.0"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sqlite",
+        "credentials": {
+          "url": "db.sqlite"
+        }
+      }
+    }
+  }
+}
