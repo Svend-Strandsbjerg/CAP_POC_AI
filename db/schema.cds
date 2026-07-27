@@ -27,48 +27,67 @@ type Priority : String(4) enum {
   EMER;
 }
 
+type DatasetVersion : String(10);
+type UserName       : String(12);
+type MessageId      : String(20);
+type MessageNumber  : String(3);
+type CurrencyCode   : String(5);
+type Amount         : Decimal(15, 2);
+type Severity       : String(1);
+
 entity SyntheticCompanies {
-  key companyId : String(4);
-  name          : String(80);
-  region        : String(20);
-  active        : Boolean;
+  key companyId  : String(4);
+  name           : String(40) not null;
+  canRequest     : Boolean not null;
+  canExecute     : Boolean not null;
+  restricted     : Boolean not null;
+  datasetVersion : DatasetVersion not null;
 }
 
 entity SyntheticAssets {
-  key assetId       : String(10);
-  description       : String(120);
-  owningCompany     : Association to SyntheticCompanies;
-  region            : String(20);
-  active            : Boolean;
-  validationBlocked : Boolean;
+  key assetId             : String(10);
+  owningCompany           : Association to SyntheticCompanies not null;
+  region                  : String(6) not null;
+  active                  : Boolean not null;
+  blocked                 : Boolean not null;
+  inspectionAllowed       : Boolean not null;
+  repairAllowed           : Boolean not null;
+  emergencyServiceAllowed : Boolean not null;
+  datasetVersion          : DatasetVersion not null;
 }
 
 entity ServiceTypes {
   key serviceTypeCode : ServiceTypeCode;
-  description         : String(80);
-  active              : Boolean;
+  description         : String(60) not null;
+  baseAmount          : Amount not null;
+  currency            : CurrencyCode not null;
+  active              : Boolean not null;
+  datasetVersion      : DatasetVersion not null;
 }
 
 entity ResponsibilityRules {
   key ruleId        : String(10);
-  requestingCompany : Association to SyntheticCompanies;
-  region            : String(20);
-  serviceType       : Association to ServiceTypes;
-  priority          : Priority;
-  executingCompany  : Association to SyntheticCompanies;
-  active            : Boolean;
+  requestingCompany : Association to SyntheticCompanies not null;
+  assetRegion       : String(6) not null;
+  serviceType       : Association to ServiceTypes not null;
+  priority          : Priority not null;
+  executingCompany  : Association to SyntheticCompanies not null;
+  active            : Boolean not null;
+  datasetVersion    : DatasetVersion not null;
 }
 
 entity ServiceOrders {
   key orderId             : String(12);
-  asset                   : Association to SyntheticAssets;
-  requestingCompany       : Association to SyntheticCompanies;
-  executingCompany        : Association to SyntheticCompanies;
-  serviceType             : Association to ServiceTypes;
-  priority                : Priority;
-  requestedExecutionDate  : Date;
-  currentLifecycleStatus  : LifecycleStatus;
-  description             : String(160);
+  asset                   : Association to SyntheticAssets not null;
+  requestingCompany       : Association to SyntheticCompanies not null;
+  executingCompany        : Association to SyntheticCompanies not null;
+  serviceType             : Association to ServiceTypes not null;
+  priority                : Priority not null;
+  requestedExecutionDate  : Date not null;
+  currentLifecycleStatus  : LifecycleStatus not null;
+  createdAt               : Timestamp not null;
+  changedAt               : Timestamp not null;
+  datasetVersion          : DatasetVersion not null;
   statusHistory           : Composition of many StatusHistory
                               on statusHistory.order = $self;
 }
@@ -76,17 +95,25 @@ entity ServiceOrders {
 entity StatusHistory {
   key order       : Association to ServiceOrders;
   key sequenceNo  : Integer;
-  lifecycleStatus : LifecycleStatus;
-  changedAt       : Timestamp;
-  reasonText      : String(255);
+  oldStatus       : LifecycleStatus not null;
+  newStatus       : LifecycleStatus not null;
+  stage           : ProcessingStage not null;
+  changedAt       : Timestamp not null;
+  changedBy       : UserName not null;
+  reasonText      : String(120) not null;
+  datasetVersion  : DatasetVersion not null;
 }
 
 entity ErrorRecords {
-  key errorId     : String(16);
-  order           : Association to ServiceOrders;
-  processingStage : ProcessingStage;
-  messageCode     : String(30);
-  messageText     : String(255);
-  recordedAt      : Timestamp;
-  contextKey      : String(40);
+  key errorId     : String(10);
+  order           : Association to ServiceOrders not null;
+  processingStage : ProcessingStage not null;
+  messageId       : MessageId not null;
+  messageNumber   : MessageNumber not null;
+  messageText     : String(220) not null;
+  severity        : Severity not null;
+  createdAt       : Timestamp not null;
+  createdBy       : UserName not null;
+  resolved        : Boolean not null;
+  datasetVersion  : DatasetVersion not null;
 }
