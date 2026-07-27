@@ -1,5 +1,5 @@
-# db
+# Synthetic Service Order Management Persistence
 
-Foundation-only placeholder for future CAP persistence artifacts.
+This folder contains the database-neutral CDS persistence model for the Synthetic Service Order Management bounded domain.
 
-No CDS domain entities, persistence models, seed data, or test data have been created.
+The model defines CAP-native business entities only. It does not include service definitions, projections, handlers, seed data, validation logic, responsibility determination, lifecycle transition logic, allocation, posting, HANA-specific artifacts, or deployment configuration.
