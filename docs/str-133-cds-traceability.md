@@ -76,4 +76,9 @@ Verified against SAP system EH3, client 300, package `$TMP`, using ARC-1 MCP rea
 
 The CDS model was adjusted after inspection to better preserve the implemented EH3 MVP baseline while remaining CAP-native. The model now includes persisted benchmark/version evidence, reference-data capability and eligibility flags, service type amount and currency reference fields, order audit timestamps, full status-history transition evidence, and full error/evidence fields.
 
+### Nullable Association Decisions
+
+- `ServiceOrders.executingCompany` is nullable in CAP. EH3 DDIC marks the persisted field as `not null`, but ABAP runtime stores character initial values and `ZCL_EH3SVC_RESP_DET=>ensure_order_input` does not require an executing company before responsibility determination. `ZCL_EH3SVC_RESP_DET=>determine_responsibility` returns the determined executing company and does not update the order itself, so a service order can exist before assignment.
+- `ErrorRecords.order` is nullable in CAP. EH3 DDIC marks the persisted field as `not null`, but `ZCL_EH3SVC_VALIDATOR=>validate_order` creates an error when the input order ID is initial, and `ZCL_EH3SVC_ERROR_LOG=>create_error` passes that initial value through to `ZCL_EH3SVC_ORDER_REPO=>create_error_record` without verifying a persisted order. Error evidence can therefore exist without a valid persisted order.
+
 The CAP model still intentionally excludes allocation, posting, validation behavior, responsibility determination behavior, lifecycle transition behavior, error creation behavior, seed/reset behavior, service definitions, handlers, UI, authentication, authorization, BTP configuration, HANA/HDI artifacts, CI/CD, external integrations, ADRs, and production hardening.

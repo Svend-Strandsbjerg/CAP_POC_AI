@@ -80,7 +80,7 @@ entity ServiceOrders {
   key orderId             : String(12);
   asset                   : Association to SyntheticAssets not null;
   requestingCompany       : Association to SyntheticCompanies not null;
-  executingCompany        : Association to SyntheticCompanies not null;
+  executingCompany        : Association to SyntheticCompanies;
   serviceType             : Association to ServiceTypes not null;
   priority                : Priority not null;
   requestedExecutionDate  : Date not null;
@@ -106,7 +106,7 @@ entity StatusHistory {
 
 entity ErrorRecords {
   key errorId     : String(10);
-  order           : Association to ServiceOrders not null;
+  order           : Association to ServiceOrders;
   processingStage : ProcessingStage not null;
   messageId       : MessageId not null;
   messageNumber   : MessageNumber not null;
