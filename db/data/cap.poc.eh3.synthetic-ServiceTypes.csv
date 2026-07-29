@@ -1,0 +1,5 @@
+serviceTypeCode,description,baseAmount,currency,active,datasetVersion
+INSP,Inspection,100.00,EUR,true,V1.0
+REPR,Repair,500.00,EUR,true,V1.0
+EMRG,Emergency repair,800.00,EUR,true,V1.0
+INAC,Inactive service type,0.00,EUR,false,V1.0
