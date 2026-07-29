@@ -8,7 +8,8 @@
     "start": "cds-serve",
     "watch": "cds watch",
     "build": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types test/*.test.ts"
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "reset:local": "node scripts/reset-local.mjs"
   },
   "dependencies": {
     "@cap-js/sqlite": "^2.0.0",

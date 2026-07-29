@@ -1,0 +1,8 @@
+ruleId,requestingCompany_companyId,assetRegion,serviceType_serviceTypeCode,priority,executingCompany_companyId,active,datasetVersion
+RULE000001,C100,R1,INSP,NORM,C100,true,V1.0
+RULE000002,C100,R1,REPR,NORM,C100,true,V1.0
+RULE000003,C100,R2,REPR,NORM,C200,true,V1.0
+RULE000004,C100,R2,EMRG,EMER,C200,true,V1.0
+RULE000005,C100,R3,INSP,NORM,C100,true,V1.0
+RULE000006,C100,R3,INSP,NORM,C200,true,V1.0
+RULE000007,C100,R1,EMRG,NORM,C200,false,V1.0

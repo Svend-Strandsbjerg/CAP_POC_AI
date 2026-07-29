@@ -1,0 +1,8 @@
+assetId,owningCompany_companyId,region,active,blocked,inspectionAllowed,repairAllowed,emergencyServiceAllowed,datasetVersion
+A100-LOCAL,C100,R1,true,false,true,true,true,V1.0
+A200-XCMP,C100,R2,true,false,false,true,true,V1.0
+A300-BLOCK,C100,R1,true,true,true,true,false,V1.0
+A400-LIMIT,C300,R3,true,false,true,false,false,V1.0
+A500-INACT,C100,R1,false,false,true,false,false,V1.0
+A600-IBLCK,C100,R1,false,true,true,false,false,V1.0
+A700-NOREG,C100,"",true,false,true,false,false,V1.0

@@ -1,0 +1,5 @@
+companyId,name,canRequest,canExecute,restricted,datasetVersion
+C100,Local Services Company,true,true,false,V1.0
+C200,Execution Services Company,true,true,false,V1.0
+C300,Restricted Services Company,true,false,true,V1.0
+C400,No Request Company,false,false,true,V1.0
