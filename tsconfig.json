@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
@@ -12,6 +13,7 @@
     ]
   },
   "include": [
+    "src/**/*.ts",
     "srv/**/*.ts",
     "test/**/*.ts"
   ]
