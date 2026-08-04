@@ -113,7 +113,7 @@ StatusHistory evidence is read through `ServiceOrderService.StatusHistory`.
 
 ## Deterministic Reset And Rerun Evidence
 
-`npm run validate:local` runs `scripts/reset-local.mjs` before STR-140 integrated validation.
+`npm run validate:local` first runs the full `npm test` baseline suite, then runs `scripts/reset-local.mjs` before STR-140 integrated validation with `STR140_VALIDATE_LOCAL=1`.
 
 The reset-repeatability scenario then runs reset twice and compares row counts:
 
@@ -146,7 +146,7 @@ npm run build
 # passed
 
 npm run validate:local
-# passed; 3 tests, 0 failures
+# passed; baseline phase 18 passed, 1 skipped, 0 failed; STR-140 phase 3 passed, 0 failed
 
 npm test
 # passed; 18 passed, 1 skipped, 0 failed
@@ -171,7 +171,7 @@ npx cds compile srv/service-order-service.cds --to edmx
 # passed
 ```
 
-The full `npm test` result includes one skipped STR-140 reset-repeatability case. That case is intentionally enabled only in `npm run validate:local`, where reset runs sequentially against `db.sqlite`; this avoids concurrent reset writes when Node runs all test files in parallel.
+The full `npm test` result includes one skipped STR-140 reset-repeatability case. That case is intentionally enabled only once in the second phase of `npm run validate:local`, where reset runs sequentially against `db.sqlite`; this avoids concurrent reset writes when Node runs all test files in parallel. Because `validate:local` runs `npm test` first, reused STR-136 through STR-139 baseline tests now fail the command before STR-140-specific validation starts.
 
 ## Files Changed
 
