@@ -320,6 +320,8 @@ Run the repository's STR-140 automated local behaviour validation command. The e
 npm run validate:local
 ```
 
+Follow-up correction: `npm run validate:local` must run the full `npm test` baseline suite first, then run the STR-140-specific integrated/reset validation with `STR140_VALIDATE_LOCAL=1`. The reset-repeatability scenario must run exactly once in the second phase to avoid shared SQLite reset races while ensuring STR-136 through STR-139 baseline test failures fail local validation immediately.
+
 The final evidence must identify the actual commands used and where the review evidence can be found according to repository conventions.
 
 Do not add a command merely to satisfy this document if an existing simpler repository command already validates the same thing.
