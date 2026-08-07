@@ -82,6 +82,51 @@ Readiness conclusion:
 - Because STR-142 requires SAP HANA Cloud / HDI deployed persistence, deployment configuration and deployment were not attempted.
 - The blocker is an environment entitlement/service-availability blocker, not a CAP code blocker.
 
+### 3.1 Recheck Against `cap-modernization-poc` on 2026-08-07
+
+The BTP readiness check was repeated after the target environment was updated.
+
+Target used:
+
+- API endpoint: `https://api.cf.eu10-004.hana.ondemand.com`
+- User: `sst@2bm.dk`
+- Org: `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`
+- Space: `cap-modernization-poc`
+
+Commands executed:
+
+| Command | Result |
+| --- | --- |
+| `cf target -s cap-modernization-poc` | Passed. Target set to org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `cap-modernization-poc`. |
+| `cf marketplace -e hana` | Passed. Service offering `hana` is visible. Plans available: `hdi-shared`, `schema`. |
+| `cf marketplace -e hana-cloud` | Passed. Service offering `hana-cloud` is visible. Plan available: `hana-cloud-option`. |
+| `cf services` | Passed, but no service instances found in the target space. |
+| `cf service-access` | `hana/hdi-shared`, `hana/schema`, and `hana-cloud/hana-cloud-option` have limited access for the target org. |
+| `cf apps` | No applications found in the target space. |
+
+Updated readiness conclusion:
+
+- `hdi-shared` is now available in the marketplace for the target org/space.
+- `hana-cloud` is now available in the marketplace as `hana-cloud-option`.
+- No actual service instances exist in `cap-modernization-poc`.
+- No HDI container exists.
+- No deployed CAP app exists.
+- A usable HANA-backed persistence target is not yet verifiable from Cloud Foundry, because there is no existing HDI service instance and no visible database-bound service instance in the space.
+
+Remaining blocker:
+
+- The entitlement/service offering blocker from the first run is resolved.
+- The deployment is still blocked at the environment-instance level: a HANA Cloud database must exist and be mapped/usable for this org/space, and an HDI container service instance must be available for the CAP app.
+
+Human/BTP-admin action required before deployment can continue:
+
+- Confirm or create the intended non-production SAP HANA Cloud database for this POC subaccount.
+- Ensure the HANA database is mapped/usable from Cloud Foundry org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `cap-modernization-poc`.
+- Approve creation of the HDI container service instance in the space, likely using service offering `hana`, plan `hdi-shared`, with the service name that will be referenced by the CAP/MTA deployment configuration.
+- Confirm that the user/deployment principal may create, bind, and use the HDI container in this space.
+
+No CAP code or deployment configuration was changed during this recheck because proceeding would require creating or targeting runtime infrastructure that is not yet present as a service instance in the target space.
+
 ## 4. Deployment Architecture
 
 Intended deployment architecture from the STR-142 package:
@@ -176,18 +221,31 @@ Behaviours not exercised remotely:
 
 ## 11. Blockers and Limitations
 
-Blocker:
+Original blocker:
 
 - SAP HANA Cloud / HDI is not available in the current Cloud Foundry marketplace for org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `ARC-1`.
 
+Updated blocker after 2026-08-07 recheck:
+
+- SAP HANA Cloud and HDI service offerings are now visible in org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `cap-modernization-poc`.
+- `hana/hdi-shared` is available.
+- `hana-cloud/hana-cloud-option` is available.
+- `cf services` shows no service instances in `cap-modernization-poc`.
+- No HDI container exists yet.
+- No HANA Cloud database instance is visible as a usable/bound service from the target CF space.
+- Deployment remains blocked until the HANA Cloud database and HDI container target are confirmed or created.
+
 Classification:
 
-- Environment entitlement or service-availability blocker.
+- Original run: environment entitlement or service-availability blocker.
+- Current run: environment instance/mapping blocker.
 
 Human action required:
 
-- Confirm the intended BTP org and space for this POC.
-- Enable or assign SAP HANA Cloud / HDI entitlement with an `hdi-shared`-compatible plan, or provide the correct target space where it is available.
+- Confirm the intended BTP org and space for this POC remains `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h` / `cap-modernization-poc`.
+- Confirm or create a non-production SAP HANA Cloud database for this POC.
+- Confirm that the database is mapped/usable from the target Cloud Foundry org/space.
+- Approve or create the HDI container service instance using `hana` / `hdi-shared`.
 - Confirm the target remains a non-production POC environment.
 
 Limitations:
