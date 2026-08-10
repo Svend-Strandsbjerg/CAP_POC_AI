@@ -3,6 +3,9 @@ gen/
 dist/
 coverage/
 .nyc_output/
+mta_archives/
+Makefile_*.mta
+.*_mta_build_tmp/
 
 *.db
 *.sqlite

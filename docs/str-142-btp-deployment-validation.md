@@ -4,10 +4,11 @@
 
 - Repository root: `C:\VSCode\sap-ai-test\CAP_POC_AI`
 - Branch: `str-142-btp-deployment-validation`
-- Starting commit: `f71aa269856e76878aba92c30f2ae26c0ca015e6`
+- Starting baseline: `main` contained STR-141 / PR #11 commit `ecbdc2b90913393c8cbad01c3d42e327ba702bd6`
+- Continuation commit before new STR-142 deployment changes: `7e5504a5be62be5a195e4b4dbf0317a3e7b28607`
 - Implementation package: `Implementation files/STR-142-implementation-package.md`
-- Objective: validate first deployment of the approved CAP POC to SAP BTP Cloud Foundry with SAP HANA Cloud and an HDI container.
-- Scope decision: deployment validation only. No CAP business behaviour, persistence semantics, service definitions, seed data, validation, responsibility determination, lifecycle, StatusHistory, ErrorRecord, or executing-company semantics were changed.
+- Objective: deploy the approved CAP POC to SAP BTP Cloud Foundry with SAP HANA Cloud / HDI-backed persistence and validate read-only runtime access.
+- Scope decision: deployment validation only. No CAP business behaviour, CDS business model, persistence semantics, service boundary, validation, responsibility determination, lifecycle, StatusHistory, ErrorRecord, or executing-company semantics were changed.
 
 ## 2. Baseline Evidence
 
@@ -34,10 +35,10 @@ Pre-change local validation:
 | --- | --- |
 | `npm install` | Passed. Packages were up to date; 0 vulnerabilities. |
 | `npm run build` | Passed. `tsc --noEmit` completed successfully. |
-| `npm test` | Passed. 19 tests, 18 passed, 0 failed, 1 skipped. |
+| `npm test` | First run hit transient existing SQLite `database is locked` reset contention; immediate rerun passed with 19 tests, 18 passed, 0 failed, 1 skipped. No deployment files had been changed before this rerun. |
 | `npm run validate:local` | Passed. Baseline phase: 19 tests, 18 passed, 0 failed, 1 skipped. STR-140 phase: 3 tests, 3 passed, 0 failed, 0 skipped. |
 
-Deterministic local seed counts inspected from `db/data`:
+Deterministic local seed counts:
 
 | Entity | Rows |
 | --- | ---: |
@@ -51,153 +52,180 @@ Deterministic local seed counts inspected from `db/data`:
 
 ## 3. BTP Readiness
 
-Readiness commands were executed with the Cloud Foundry CLI against the currently configured target.
+Target used:
+
+- Subaccount: `2BM SAP ERP UDV Clean Core`
+- API endpoint: `https://api.cf.eu10-004.hana.ondemand.com`
+- Org: `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`
+- Space: `cap-modernization-poc`
+- User: `sst@2bm.dk`
+
+Readiness commands and results:
 
 | Check | Result |
 | --- | --- |
-| `cf version` | `cf.exe version 8.18.3+83ce51d9c.2026-04-16` |
-| `cf api` | API endpoint `https://api.cf.eu10-004.hana.ondemand.com`, API version `3.224.0` |
-| `cf target` | User `sst@2bm.dk`, org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `ARC-1` |
-| `cf orgs` | Org available: `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h` |
-| `cf spaces` | Spaces available: `ARC-1`, `UDV` |
-| `cf space ARC-1` | Existing app `arc1-mcp-server`; existing services `arc1-application-logs`, `arc1-connectivity`, `arc1-destination`, `arc1-xsuaa`; staging/running security groups present |
-| `cf apps` | Existing app `arc1-mcp-server` is started |
-| `cf marketplace` | Marketplace is reachable, but no SAP HANA Cloud or HDI offering is listed |
-| `cf marketplace -e hana` | `No service offerings found.` |
-| `cf marketplace -e hana-cloud` | `No service offerings found.` |
-| `cf services` | Existing services only: application logs, connectivity, destination, xsuaa. No HANA or HDI container service instance exists. |
+| `cf target -s cap-modernization-poc` | Targeted org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `cap-modernization-poc`. |
+| `cf target` | Confirmed API `https://api.cf.eu10-004.hana.ondemand.com`, API version `3.224.0`, user, org and space. |
+| `cf marketplace -e hana` | `hana` service available with `hdi-shared` and `schema` plans. |
+| `cf marketplace -e hana-cloud` | `hana-cloud` service available with `hana-td` and `hana-cloud-option` plans. |
+| `cf services` | HANA Cloud instance `cap-modernization-poc-hana` exists with service `hana-cloud`, plan `hana-td`, create succeeded. |
+| `cf service-access` | `hana/hdi-shared`, `hana/schema`, `hana-cloud/hana-td`, `hana-cloud/hana-cloud-option`, and `hana-cloud-tools/tools` access are available to the org. |
+| `cf apps` before deployment | No apps found in the target space. |
+| `cf create-service hana hdi-shared cap-poc-ai-db --wait` | HDI service `cap-poc-ai-db` created successfully. |
 
 Tooling:
 
 | Tool | Result |
 | --- | --- |
-| `mbt --version` | Cloud MTA Build Tool version `1.2.47` |
-| `cf plugins` | `multiapps` plugin version `3.11.1` installed |
+| `mbt --version` | Cloud MTA Build Tool version `1.2.47`. |
+| `cf plugins` | `multiapps` plugin version `3.11.1` installed. |
 
 Readiness conclusion:
 
-- Cloud Foundry is enabled and the CLI can inspect the target org and space.
-- MTA build and deploy tooling is available.
-- HANA Cloud / HDI readiness is blocked because neither `hana`, `hana-cloud`, nor an `hdi-shared` service plan is available in the targeted marketplace, and no existing HDI service instance is present in the target space.
-- Because STR-142 requires SAP HANA Cloud / HDI deployed persistence, deployment configuration and deployment were not attempted.
-- The blocker is an environment entitlement/service-availability blocker, not a CAP code blocker.
-
-### 3.1 Recheck Against `cap-modernization-poc` on 2026-08-07
-
-The BTP readiness check was repeated after the target environment was updated.
-
-Target used:
-
-- API endpoint: `https://api.cf.eu10-004.hana.ondemand.com`
-- User: `sst@2bm.dk`
-- Org: `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`
-- Space: `cap-modernization-poc`
-
-Commands executed:
-
-| Command | Result |
-| --- | --- |
-| `cf target -s cap-modernization-poc` | Passed. Target set to org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `cap-modernization-poc`. |
-| `cf marketplace -e hana` | Passed. Service offering `hana` is visible. Plans available: `hdi-shared`, `schema`. |
-| `cf marketplace -e hana-cloud` | Passed. Service offering `hana-cloud` is visible. Plan available: `hana-cloud-option`. |
-| `cf services` | Passed, but no service instances found in the target space. |
-| `cf service-access` | `hana/hdi-shared`, `hana/schema`, and `hana-cloud/hana-cloud-option` have limited access for the target org. |
-| `cf apps` | No applications found in the target space. |
-
-Updated readiness conclusion:
-
-- `hdi-shared` is now available in the marketplace for the target org/space.
-- `hana-cloud` is now available in the marketplace as `hana-cloud-option`.
-- No actual service instances exist in `cap-modernization-poc`.
-- No HDI container exists.
-- No deployed CAP app exists.
-- A usable HANA-backed persistence target is not yet verifiable from Cloud Foundry, because there is no existing HDI service instance and no visible database-bound service instance in the space.
-
-Remaining blocker:
-
-- The entitlement/service offering blocker from the first run is resolved.
-- The deployment is still blocked at the environment-instance level: a HANA Cloud database must exist and be mapped/usable for this org/space, and an HDI container service instance must be available for the CAP app.
-
-Human/BTP-admin action required before deployment can continue:
-
-- Confirm or create the intended non-production SAP HANA Cloud database for this POC subaccount.
-- Ensure the HANA database is mapped/usable from Cloud Foundry org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `cap-modernization-poc`.
-- Approve creation of the HDI container service instance in the space, likely using service offering `hana`, plan `hdi-shared`, with the service name that will be referenced by the CAP/MTA deployment configuration.
-- Confirm that the user/deployment principal may create, bind, and use the HDI container in this space.
-
-No CAP code or deployment configuration was changed during this recheck because proceeding would require creating or targeting runtime infrastructure that is not yet present as a service instance in the target space.
+- HANA Cloud is visible and usable from the target space through the HDI service broker.
+- `hdi-shared` is available and the current user can create HDI service instances.
+- The previous STR-142 blocker is resolved.
 
 ## 4. Deployment Architecture
 
-Intended deployment architecture from the STR-142 package:
+Implemented deployment architecture:
 
-- CAP Node.js application on SAP BTP Cloud Foundry.
-- SQLite retained for local development.
-- SAP HANA Cloud / HDI container for deployed persistence.
-- Manual deployment.
-- No CI/CD.
-- No UI.
-- No external SAP integration.
-- No production authorization model.
+- One MTA deployment path using `mta.yaml`.
+- One Cloud Foundry Node.js module: `cap-poc-ai-srv`.
+- One HDI deployer module: `cap-poc-ai-db-deployer`.
+- One HDI resource: `cap-poc-ai-db`, service `hana`, plan `hdi-shared`.
+- Deployed profile uses HANA through `@cap-js/hana`.
+- Local profile remains SQLite through the existing `@cap-js/sqlite` configuration.
+- Production authentication for deployed validation is CAP `dummy` auth, documented as POC-only and not a production security architecture.
 
-No `mta.yaml`, HANA deployer module, HDI resource, production profile, or authentication configuration was added because the target BTP environment did not expose the required HANA/HDI service offering. Adding deployment files without a clear target HDI resource would be speculative and would not satisfy the STR-142 deployment-validation contract.
+No CI/CD, UI, external SAP integration, production authorization model, or new business API was introduced.
 
 ## 5. Files Changed
 
-- `docs/str-142-btp-deployment-validation.md`: records the STR-142 readiness checks, blocker, baseline preservation evidence, and final validation.
-- `Implementation files/STR-142-implementation-package.md`: added to repository traceability for the authoritative STR-142 implementation package.
+- `.gitignore`: ignores generated MTA archives, MTA makefiles, and temporary MTA build folders.
+- `mta.yaml`: defines the minimal MTA service module, HDI deployer module, and `hana/hdi-shared` resource.
+- `package.json`: adds `@cap-js/hana` and a production-only `db.kind = hana` profile with `auth.kind = dummy`.
+- `package-lock.json`: records the HANA adapter dependency tree.
+- `docs/str-142-btp-deployment-validation.md`: records deployment evidence and validation.
+- `Implementation files/STR-142-implementation-package.md`: authoritative STR-142 package retained for repository traceability.
 
-No production source files were changed.
+No production business source files under `src/`, `db/schema.cds`, `srv/`, seed data, tests, or reset scripts were changed.
 
 ## 6. Build Evidence
 
-Deployment artifact build was not attempted because the HANA/HDI prerequisite is unavailable in the target BTP space.
+CAP production build:
 
-Available build tooling:
+- Command: `npx cds build --production`
+- Result: passed.
+- Generated both HANA database deployment output and Node.js service output under `gen/`.
+- HANA output included `.hdbtable`, `.hdbview`, CSV, and `.hdbtabledata` artifacts generated from the existing database-neutral CDS model and STR-134 seed files.
 
-- `mbt --version`: `1.2.47`
-- `cf plugins`: `multiapps 3.11.1`
+MTA build:
 
-Generated output handling:
-
-- No MTAR archive was generated.
-- No `mta_archives` output was committed.
+- Initial `mbt build` with `npm ci` failed due an npm CLI/cache error.
+- The MTA pre-build was changed to avoid dependency installation during `before-all`.
+- Initial `npx cds build --production` inside `mbt` tried registry resolution and failed; the command was changed to `node node_modules/@sap/cds-dk/bin/cds.js build --production`.
+- Final command: `mbt build`
+- Result: passed.
+- Generated archive: `mta_archives\cap-poc-ai_0.1.0.mtar`
+- Archive size: approximately 9.16 MiB.
+- Generated MTAR and build output were not committed.
 
 ## 7. Deployment Evidence
 
-Deployment was not attempted.
+Deployment command:
 
-Reason:
+```powershell
+cf deploy .\mta_archives\cap-poc-ai_0.1.0.mtar
+```
 
-- The target marketplace does not expose SAP HANA Cloud / HDI service offerings or an `hdi-shared` plan.
-- No existing HDI container service instance is available in the target space.
-- Proceeding would require guessing deployment resources or changing the approved deployment architecture.
+Deployment result:
+
+- First deployment created `cap-poc-ai-srv`, `cap-poc-ai-db-deployer`, and bound both apps to `cap-poc-ai-db`.
+- The HDI deployer executed successfully and deployed 31 files to the HDI container.
+- The first service app start failed because CAP defaulted to JWT auth in production and `@sap/xssec` was not present.
+- Deployment-only fix: configured CAP production auth as `dummy` for POC validation instead of introducing XSUAA/security architecture.
+- The failed MTA operation `979320ed-948c-11f1-8b1b-eeee0a8d1ddb` was aborted.
+- Redeployment operation `b722da3b-948d-11f1-8b1b-eeee0a8d1ddb` finished successfully.
+
+Final deployment result:
+
+- `cap-poc-ai-srv` started and available at `https://2bm-a-s-2bm-sap-erp-udv-clean-core-dhkdgq3h-cap-moderniz3653036.cfapps.eu10-004.hana.ondemand.com`
+- `cap-poc-ai-db-deployer` stopped after successful deployer task execution.
+- `cap-poc-ai-db` remains bound to both `cap-poc-ai-srv` and `cap-poc-ai-db-deployer`.
 
 ## 8. HANA/HDI Evidence
 
-HANA/HDI validation result:
+Service instances:
 
-- `cf marketplace -e hana`: no service offerings found.
-- `cf marketplace -e hana-cloud`: no service offerings found.
-- `cf services`: no HANA or HDI service instance present.
+| Instance | Offering | Plan | Status | Bound apps |
+| --- | --- | --- | --- | --- |
+| `cap-modernization-poc-hana` | `hana-cloud` | `hana-td` | create succeeded | none |
+| `cap-poc-ai-db` | `hana` | `hdi-shared` | create succeeded | `cap-poc-ai-srv`, `cap-poc-ai-db-deployer` |
 
-Binding result:
+HDI deployer evidence:
 
-- No application-to-HDI binding was created.
-- No schema deployment was executed.
+- `@sap/hdi-deploy` version `5.7.0` ran through the generated deployer module.
+- Target service: `cap-poc-ai-db`.
+- Deployed HANA tables, service views, and deterministic seed tabledata.
+- Make result: succeeded with 31 files deployed.
+- Inserted reference data:
+  - SyntheticCompanies: 4
+  - SyntheticAssets: 7
+  - ServiceTypes: 4
+  - ResponsibilityRules: 7
+- Inserted transactional baseline:
+  - ServiceOrders: 0
+  - StatusHistory: 0
+  - ErrorRecords: 0
+
+Application log evidence:
+
+- CAP loaded `srv/csn.json`.
+- CAP connected to `db > hana`.
+- Credential values were not committed or documented.
+- CAP served `ServiceOrderService` at `/service-orders`.
 
 ## 9. Runtime Verification
 
-No deployed runtime endpoint was available because deployment was blocked before application deployment.
+Base endpoint:
 
-Local read-only service behaviour remains evidenced by the unchanged STR-135 through STR-141 baseline tests and `validate:local`.
+```text
+https://2bm-a-s-2bm-sap-erp-udv-clean-core-dhkdgq3h-cap-moderniz3653036.cfapps.eu10-004.hana.ondemand.com/service-orders
+```
+
+Endpoint checks:
+
+| Endpoint | HTTP status | Count | Result shape |
+| --- | ---: | ---: | --- |
+| `$metadata` | 200 | n/a | Metadata document |
+| `SyntheticCompanies` | 200 | 4 | `canExecute,canRequest,companyId,datasetVersion,name,restricted` |
+| `SyntheticAssets` | 200 | 7 | `active,assetId,blocked,datasetVersion,emergencyServiceAllowed,inspectionAllowed,owningCompany_companyId,region,repairAllowed` |
+| `ServiceTypes` | 200 | 4 | `active,baseAmount,currency,datasetVersion,description,serviceTypeCode` |
+| `ResponsibilityRules` | 200 | 7 | `active,assetRegion,datasetVersion,executingCompany_companyId,priority,requestingCompany_companyId,ruleId,serviceType_serviceTypeCode` |
+| `ServiceOrders` | 200 | 0 | Empty value array |
+| `StatusHistory` | 200 | 0 | Empty value array |
+| `ErrorRecords` | 200 | 0 | Empty value array |
+
+Runtime verification conclusion:
+
+- The deployed CAP service responds.
+- OData metadata responds.
+- Reference data is readable with expected deterministic STR-134 counts.
+- Transactional projections are accessible and empty as expected from the deterministic baseline.
+- No executing company is unexpectedly persisted because there are no persisted service-order rows in the deployed baseline.
 
 ## 10. Behaviour-Preservation Evidence
 
 Behaviours directly verified on BTP:
 
-- Cloud Foundry target inspection only.
-- No deployed CAP business behaviour was executed.
+- CAP application starts on Cloud Foundry.
+- Application is bound to the HDI container.
+- Application connects to HANA in the deployed profile.
+- HDI deployer creates HANA artifacts from the approved CDS/service model.
+- Deterministic reference data is loaded into HANA and readable through STR-135 read-only projections.
+- Transactional projections for ServiceOrders, StatusHistory, and ErrorRecords respond and are empty.
+- Service metadata is available.
 
 Behaviours preserved through unchanged source and passing local validation:
 
@@ -209,66 +237,51 @@ Behaviours preserved through unchanged source and passing local validation:
 - STR-138 Responsibility Determination behaviour, including executing company returned only and not persisted.
 - STR-139 lifecycle transitions and StatusHistory behaviour.
 - STR-140 integrated local validation and reset-repeatability.
-- STR-141 comparison evidence remains unchanged.
+- STR-141 ABAP-to-CAP comparison evidence remains unchanged.
 
 Behaviours not exercised remotely:
 
-- HANA-backed persistence.
-- HDI schema deployment.
-- Deployed service metadata/readback.
-- Deployed reference-data readback.
-- Deployed transactional projection readback.
+- Write-based validation, responsibility, lifecycle, ErrorRecord, and StatusHistory scenarios were not executed remotely because STR-135 exposes read-only service projections and STR-142 must not add public write APIs or test-only endpoints.
+- Full STR-140 integrated behaviour remains evidenced locally by unchanged code and passing `validate:local`.
 
 ## 11. Blockers and Limitations
 
-Original blocker:
+Resolved blocker:
 
-- SAP HANA Cloud / HDI is not available in the current Cloud Foundry marketplace for org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `ARC-1`.
+- Previous HANA/HDI marketplace/service availability blocker is resolved in space `cap-modernization-poc`.
 
-Updated blocker after 2026-08-07 recheck:
+Remaining limitations:
 
-- SAP HANA Cloud and HDI service offerings are now visible in org `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h`, space `cap-modernization-poc`.
-- `hana/hdi-shared` is available.
-- `hana-cloud/hana-cloud-option` is available.
-- `cf services` shows no service instances in `cap-modernization-poc`.
-- No HDI container exists yet.
-- No HANA Cloud database instance is visible as a usable/bound service from the target CF space.
-- Deployment remains blocked until the HANA Cloud database and HDI container target are confirmed or created.
-
-Classification:
-
-- Original run: environment entitlement or service-availability blocker.
-- Current run: environment instance/mapping blocker.
-
-Human action required:
-
-- Confirm the intended BTP org and space for this POC remains `2BM A-S_2bm-sap-erp-udv-clean-core-dhkdgq3h` / `cap-modernization-poc`.
-- Confirm or create a non-production SAP HANA Cloud database for this POC.
-- Confirm that the database is mapped/usable from the target Cloud Foundry org/space.
-- Approve or create the HDI container service instance using `hana` / `hdi-shared`.
-- Confirm the target remains a non-production POC environment.
-
-Limitations:
-
-- No MTA deployment was performed.
-- No HDI container was created or bound.
-- No HANA schema deployment was validated.
-- No deployed CAP endpoint was tested.
+- Remote validation is read-only because the approved public CAP service is read-only.
+- No production authentication or authorization architecture was implemented.
+- `auth.kind = dummy` is deployment-validation-only and not suitable as production security.
+- No external SAP integration, CI/CD, monitoring, production hardening, load testing, or STR-143 work was performed.
+- The generated MTAR is local build output and was not committed.
 
 No workaround or CAP business change was introduced.
 
 ## 12. Final Validation
 
-Final local validation was run after preparing this evidence document.
+Final local validation was run after deployment configuration changes.
 
 | Command | Result |
 | --- | --- |
-| `npm install` | Passed. Packages were up to date; 0 vulnerabilities. |
+| `npm install` | Passed. 263 packages audited; 0 vulnerabilities. |
 | `npm run build` | Passed. |
 | `npm test` | Passed. 19 tests, 18 passed, 0 failed, 1 skipped. |
 | `npm run validate:local` | Passed. Baseline phase: 19 tests, 18 passed, 0 failed, 1 skipped. STR-140 phase: 3 tests, 3 passed, 0 failed, 0 skipped. |
 | `git diff --check` | Passed. |
-| `git status --short` | Only STR-142 documentation/package changes plus unrelated historical untracked implementation-package files. Only STR-142 files were staged for commit. |
+| `git status --short` | Only STR-142 files changed plus historical untracked implementation-package files not staged. |
+
+Deployment/runtime validation:
+
+| Command | Result |
+| --- | --- |
+| `mbt build` | Passed. Generated `mta_archives\cap-poc-ai_0.1.0.mtar`. |
+| `cf deploy .\mta_archives\cap-poc-ai_0.1.0.mtar` | Passed after aborting the previous failed operation and redeploying the updated archive. |
+| `cf apps` | `cap-poc-ai-srv` started, `web:1/1`; `cap-poc-ai-db-deployer` stopped after task execution. |
+| `cf services` | `cap-poc-ai-db` bound to service and deployer; HANA Cloud instance visible. |
+| Endpoint readback | `$metadata` and all approved STR-135 projections returned HTTP 200. |
 
 ## 13. Scope Confirmation
 
@@ -277,6 +290,7 @@ Final local validation was run after preparing this evidence document.
 - No CDS business model or persistence semantics changed.
 - No service boundary changed.
 - No validation, Responsibility Determination, lifecycle, StatusHistory, ErrorRecord, or executing-company semantics changed.
+- No production reset endpoint, test-only public API, handler, action, or function was introduced.
 - No CI/CD was introduced.
 - No production security architecture was introduced.
 - No external SAP integration was introduced.
