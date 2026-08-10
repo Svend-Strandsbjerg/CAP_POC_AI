@@ -13,12 +13,13 @@
     "reset:local": "node scripts/reset-local.mjs"
   },
   "dependencies": {
+    "@cap-js/hana": "^2.8.0",
     "@cap-js/sqlite": "^2.0.0",
     "@sap/cds": "^9.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
     "@sap/cds-dk": "^9.0.0",
+    "@types/node": "^24.0.0",
     "typescript": "^5.8.0"
   },
   "cds": {
@@ -27,6 +28,14 @@
         "kind": "sqlite",
         "credentials": {
           "url": "db.sqlite"
+        }
+      },
+      "[production]": {
+        "db": {
+          "kind": "hana"
+        },
+        "auth": {
+          "kind": "dummy"
         }
       }
     }

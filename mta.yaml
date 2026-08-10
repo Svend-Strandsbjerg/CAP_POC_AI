@@ -1,0 +1,47 @@
+_schema-version: "3.3"
+ID: cap-poc-ai
+version: 0.1.0
+description: SAP CAP deployment validation for the EH3 ABAP to CAP modernization POC.
+
+parameters:
+  enable-parallel-deployments: true
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - node node_modules/@sap/cds-dk/bin/cds.js build --production
+
+modules:
+  - name: cap-poc-ai-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      buildpack: nodejs_buildpack
+      instances: 1
+      memory: 512M
+      disk-quota: 1024M
+    properties:
+      NODE_ENV: production
+      CDS_ENV: production
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    requires:
+      - name: cap-poc-ai-db
+
+  - name: cap-poc-ai-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: cap-poc-ai-db
+
+resources:
+  - name: cap-poc-ai-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
